@@ -2,6 +2,7 @@
 #define SDK_H
 
 #include "BaseTypes.h"
+#include "Defines.h"
 #include "Types/_generic.h"
 #include "Types/AmmoInfo.h"
 #include "Types/ItemInfo.h"

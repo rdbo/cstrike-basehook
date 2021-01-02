@@ -8,9 +8,8 @@
 #define WNDPROC_INDEX GWLP_WNDPROC
 #endif
 
-#define D3DDEV9_LEN 119
-
 #include "pch.h"
+#include "game.h"
 
 typedef BOOL(__stdcall* SwapBuffers_t)(_In_ HDC hdc);
 typedef LRESULT(CALLBACK*  WndProc_t) (HWND, UINT, WPARAM, LPARAM);
@@ -37,6 +36,9 @@ namespace Base
 		extern bool              InitImGui;
 		extern bool              ShowMenu;
 
+		extern cstrike::hw*      m_hw;
+		extern cstrike::client*  m_client;
+
 		namespace Keys
 		{
 			const UINT ToggleMenu = VK_INSERT;
@@ -51,6 +53,8 @@ namespace Base
 
 		BOOL __stdcall SwapBuffers(_In_ HDC hdc);
 		LRESULT CALLBACK  WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+		void CL_CreateMove(float frametime, struct usercmd_s* cmd, int active);
+		int  CL_IsThirdPerson(void);
 	}
 }
 

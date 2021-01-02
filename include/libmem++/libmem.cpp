@@ -193,7 +193,7 @@ mem::bool_t mem::lib_t::is_valid()
 
 mem::vtable_t::vtable_t(voidptr_t* vtable)
 {
-	this->table = std::make_shared<voidptr_t>(vtable);
+	this->table = vtable;
 }
 
 mem::vtable_t::~vtable_t()
@@ -204,15 +204,34 @@ mem::vtable_t::~vtable_t()
 mem::bool_t mem::vtable_t::is_valid()
 {
 	return (bool_t)(
-		this->table.get() != (voidptr_t*)-1
+		this->table != (voidptr_t*)-1
 	);
+}
+
+mem::voidptr_t mem::vtable_t::get_function(size_t index)
+{
+    return this->table[index];
+}
+
+mem::voidptr_t mem::vtable_t::get_original(size_t index)
+{
+    return this->orig_table.at(index);
 }
 
 mem::bool_t mem::vtable_t::hook(size_t index, voidptr_t dst)
 {
 	if (!this->is_valid()) return false;
-	this->orig_table.insert(std::pair<size_t, voidptr_t>(index, this->table.get()[index]));
-	this->table.get()[index] = dst;
+
+#   if defined(MEM_WIN)
+    prot_t prot = PAGE_EXECUTE_READWRITE;
+#   elif defined(MEM_LINUX)
+    prot_t prot = PROT_EXEC | PROT_READ | PROT_WRITE;
+#   endif
+
+    in::protect(&this->table[index], sizeof(voidptr_t), prot);
+
+	this->orig_table.insert(std::pair<size_t, voidptr_t>(index, this->get_function(index)));
+	this->table[index] = dst;
 	return true;
 }
 
@@ -224,7 +243,7 @@ mem::bool_t mem::vtable_t::restore(size_t index)
 	{
 		if (i->first == index)
 		{
-			this->table.get()[index] = i->second;
+			this->table[index] = i->second;
 			return true;
 		}
 	}
@@ -237,7 +256,7 @@ mem::bool_t mem::vtable_t::restore_all()
 	if (!this->is_valid()) return false;
 
 	for (auto i = this->orig_table.begin(); i != this->orig_table.end(); i++)
-		this->table.get()[i->first] = i->second;
+		this->table[i->first] = i->second;
 
 	return true;
 }
@@ -479,7 +498,77 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	mod.path = module_info.szExePath;
 	mod.name = module_info.szModule;
 #	elif defined(MEM_LINUX)
-	//WIP
+	std::stringstream maps_file;
+	maps_file << "/proc/" << process.pid << "/maps";
+	std::ifstream maps_fs(maps_file.str());
+	if(!maps_fs.is_open()) return mod;
+	maps_file.str(std::string());
+	maps_file << maps_fs.rdbuf();
+
+	//--
+
+	size_t module_path_pos = 0;
+	size_t module_path_end = 0;
+	std::string module_path_str = "";
+
+	module_path_pos = maps_file.str().find(module_name);
+	size_t holder = module_path_pos;
+    module_path_pos = maps_file.str().rfind('\n', module_path_pos);
+    if(module_path_pos == maps_file.str().npos)
+        module_path_pos = maps_file.str().rfind("              /", holder);
+    module_path_pos = maps_file.str().find('/', module_path_pos);
+    module_path_end = maps_file.str().find('\n', module_path_pos);
+    if(module_path_pos == maps_file.str().npos || module_path_end == maps_file.str().npos) return mod;
+    module_path_str = maps_file.str().substr(module_path_pos, module_path_end - module_path_pos);
+
+    //--
+
+    std::string module_name_str = module_path_str.substr(
+        module_path_str.rfind('/') + 1
+    );
+
+    //--
+
+    size_t base_address_pos = maps_file.str().rfind('\n', module_path_pos) + 1;
+    size_t base_address_end = maps_file.str().find('-', base_address_pos);
+    if(base_address_pos == maps_file.str().npos || base_address_end == maps_file.str().npos) return mod;
+    std::string base_address_str = maps_file.str().substr(base_address_pos, base_address_end - base_address_pos);
+    base_address_str += '\0';
+    void* base_address = MEM_STR_TO_PTR(base_address_str.c_str());
+
+    //--
+
+    size_t end_address_pos = 0;
+    size_t end_address_end = 0;
+    std::string end_address_str = "";
+    void* end_address = (void*)-1;
+
+    end_address_pos = maps_file.str().rfind(module_path_str);
+    end_address_pos = maps_file.str().rfind('\n', end_address_pos) + 1;
+    end_address_pos = maps_file.str().find('-', end_address_pos) + 1;
+
+    end_address_end = maps_file.str().find(' ', end_address_pos);
+
+    if(end_address_pos == maps_file.str().npos || end_address_end == maps_file.str().npos) return mod;
+
+    end_address_str = maps_file.str().substr(end_address_pos, end_address_end - end_address_pos);
+    end_address_str += '\0';
+    end_address = MEM_STR_TO_PTR(end_address_str.c_str());
+
+    //--
+
+    uintptr_t module_size = (uintptr_t)end_address - (uintptr_t)base_address;
+
+    //--
+
+    mod.name = string_t(module_name_str);
+    mod.path = string_t(module_path_str);
+    mod.base = base_address;
+    mod.size = module_size;
+    mod.end  = end_address;
+
+    maps_fs.close();
+
 #	endif
 
 	return mod;
@@ -515,7 +604,57 @@ mem::module_list_t mem::ex::get_module_list(process_t process)
 
 	CloseHandle(hSnap);
 #	elif defined(MEM_LINUX)
-	//WIP
+	std::stringstream maps_file;
+	maps_file << "/proc/" << process.pid << "/maps";
+	std::ifstream maps_fs(maps_file.str());
+	if(!maps_fs.is_open()) return mod_list;
+	maps_file.str(std::string());
+	maps_file << maps_fs.rdbuf();
+
+	size_t module_path_pos = 0;
+	size_t module_path_end = 0;
+	size_t next = 0;
+
+	while((module_path_pos = maps_file.str().find('/', next)) && module_path_pos != maps_file.str().npos)
+	{
+		module_path_end = maps_file.str().find('\n', module_path_pos);
+		std::string module_path_str = maps_file.str().substr(module_path_pos, module_path_end - module_path_pos);
+
+		size_t module_name_pos = maps_file.str().rfind('/', module_path_end) + 1;
+		size_t module_name_end = module_path_end;
+		std::string module_name_str = maps_file.str().substr(module_name_pos, module_name_end - module_name_pos);
+
+		size_t base_address_pos = maps_file.str().rfind('\n', module_path_pos) + 1;
+		size_t base_address_end = maps_file.str().find('-', base_address_pos);
+		std::string base_address_str = maps_file.str().substr(base_address_pos, base_address_end - base_address_pos);
+		base_address_str += '\0';
+		voidptr_t base_address = MEM_STR_TO_PTR(base_address_str.c_str());
+
+		size_t   end_address_pos = maps_file.str().rfind('\n', maps_file.str().rfind(module_path_str));
+		end_address_pos = maps_file.str().find('-', end_address_pos) + 1;
+		size_t   end_address_end = maps_file.str().find(' ', end_address_pos);
+		std::string end_address_str = maps_file.str().substr(end_address_pos, end_address_end);
+		end_address_str += '\0';
+		voidptr_t end_address = MEM_STR_TO_PTR(end_address_str.c_str());
+
+		size_t mod_size = (uintptr_t)end_address - (uintptr_t)base_address;
+
+		module_handle_t handle = (module_handle_t)MEM_BAD;
+
+		module_t mod = module_t();
+		mod.name = string_t(module_name_str);
+		mod.path = string_t(module_path_str);
+		mod.base = base_address;
+		mod.size = mod_size;
+		mod.end  = end_address;
+		mod.handle = handle;
+
+		mod_list.push_back(mod);
+		next = maps_file.str().find('\n', end_address_end);
+		if(next == maps_file.str().npos) break;
+	}
+
+	maps_fs.close();
 #	endif
 
 	return mod_list;
@@ -534,7 +673,70 @@ mem::page_t mem::ex::get_page(process_t process, voidptr_t src)
 	page.protection = mbi.Protect;
 	page.flags = mbi.Type;
 #	elif defined(MEM_LINUX)
-	//WIP
+	std::stringstream maps_file;
+	maps_file << "/proc/" << process.pid << "/maps";
+	std::ifstream maps_fs(maps_file.str());
+	if(!maps_fs.is_open()) return page;
+	maps_file.str(std::string());
+	maps_file << maps_fs.rdbuf();
+
+	std::stringstream src_str;
+	src_str << src;
+
+	size_t to_remove = src_str.str().find("0x");
+
+	if(to_remove != src_str.str().npos)
+		src_str.str(src_str.str().erase(to_remove, strlen("0x")));
+
+	size_t page_base_pos = maps_file.str().rfind(src_str.str());
+	if(page_base_pos == maps_file.str().npos) return page;
+
+	size_t page_end_pos = maps_file.str().find('-') + 1;
+	size_t page_end_end = maps_file.str().find(' ');
+	std::string page_end_str = maps_file.str().substr(page_end_pos, page_end_end - page_end_pos);
+	voidptr_t page_end = MEM_STR_TO_PTR(page_end_str.c_str());
+
+	size_t start = maps_file.str().find(' ', page_base_pos) + 1;
+	size_t end = start + 4;
+
+	page.protection = 0;
+
+	for(size_t i = start; i < end; i++)
+	{
+		char c = maps_file.str()[i];
+		switch(c)
+		{
+			case 'r':
+			page.protection |= PROT_READ;
+			break;
+
+			case 'w':
+			page.protection |= PROT_WRITE;
+			break;
+
+			case 'x':
+			page.protection |= PROT_EXEC;
+			break;
+
+			case 'p':
+			page.flags = MAP_PRIVATE;
+			break;
+
+			case 's':
+			page.flags = MAP_SHARED;
+			break;
+
+			default:
+			break;
+		}
+	}
+
+	page.base = src;
+	page.size = (uintptr_t)page_end - (uintptr_t)src;
+	page.end  = page_end;
+
+
+	maps_fs.close();
 #	endif
 
 	return page;
@@ -614,7 +816,70 @@ mem::voidptr_t mem::ex::syscall(process_t process, int_t syscall_n, voidptr_t ar
 	if (!process.is_valid()) return ret;
 #	if defined(MEM_WIN)
 #	elif defined(MEM_LINUX)
-	//WIP
+	int status;
+    struct user_regs_struct old_regs, regs;
+    voidptr_t injection_addr = (voidptr_t)MEM_BAD;
+    byte_t injection_buf[] =
+    {
+#       if defined(MEM_86)
+        0xcd, 0x80, //int80 (syscall)
+#       elif defined(MEM_64)
+        0x0f, 0x05, //syscall
+#       endif
+		0x90, //nop
+		0x90, //nop
+		0x90, //nop
+		0x90, //nop
+		0x90, //nop
+		0x90  //nop
+    };
+
+    uintptr_t old_data;
+	uintptr_t injection_buffer;
+	memcpy(&injection_buffer, injection_buf, sizeof(injection_buffer));
+    ptrace(PTRACE_ATTACH, process.pid, MEM_NULL, MEM_NULL);
+    wait(&status);
+
+    ptrace(PTRACE_GETREGS, process.pid, MEM_NULL, &old_regs);
+    regs = old_regs;
+
+#   if defined(MEM_86)
+    regs.eax = (uintptr_t)syscall_n;
+    regs.ebx = (uintptr_t)arg0;
+    regs.ecx = (uintptr_t)arg1;
+    regs.edx = (uintptr_t)arg2;
+    regs.esi = (uintptr_t)arg3;
+    regs.edi = (uintptr_t)arg4;
+    regs.ebp = (uintptr_t)arg5;
+    injection_addr = (voidptr_t)regs.eip;
+#   elif defined(MEM_64)
+    regs.rax = (uintptr_t)syscall_n;
+    regs.rdi = (uintptr_t)arg0;
+    regs.rsi = (uintptr_t)arg1;
+    regs.rdx = (uintptr_t)arg2;
+    regs.r10 = (uintptr_t)arg3;
+    regs.r8  = (uintptr_t)arg4;
+    regs.r9  = (uintptr_t)arg5;
+    injection_addr = (voidptr_t)regs.rip;
+#   endif
+
+	old_data = (uintptr_t)ptrace(PTRACE_PEEKDATA, process.pid, (void*)((uintptr_t)injection_addr), MEM_NULL);
+	ptrace(PTRACE_POKEDATA, process.pid, (void*)((uintptr_t)injection_addr), (injection_buffer));
+
+    ptrace(PTRACE_SETREGS, process.pid, MEM_NULL, &regs);
+    ptrace(PTRACE_SINGLESTEP, process.pid, MEM_NULL, MEM_NULL);
+    waitpid(process.pid, &status, WSTOPPED);
+    ptrace(PTRACE_GETREGS, process.pid, MEM_NULL, &regs);
+#   if defined(MEM_86)
+    ret = (voidptr_t)regs.eax;
+#   elif defined(MEM_64)
+    ret = (voidptr_t)regs.rax;
+#   endif
+
+	ptrace(PTRACE_POKEDATA, process.pid, (void*)((uintptr_t)injection_addr), (old_data));
+
+    ptrace(PTRACE_SETREGS, process.pid, MEM_NULL, &old_regs);
+    ptrace(PTRACE_DETACH, process.pid, MEM_NULL, MEM_NULL);
 #	endif
 	return ret;
 }
@@ -743,7 +1008,94 @@ mem::module_t mem::ex::load_library(process_t process, lib_t lib)
 	VirtualFreeEx(process.handle, libpath_ex, 0, MEM_RELEASE);
 	mod = ex::get_module(process, lib.path);
 #   elif defined(MEM_LINUX)
-	//WIP
+	string_t libc_str = "/libc.so";
+	module_t libc_ex  = ex::get_module(process, libc_str);
+	if(!libc_ex.is_valid())
+	{
+		libc_str = "/libc-";
+		libc_ex  = ex::get_module(process, libc_str);
+		if(!libc_ex.is_valid())
+			return mod;
+	}
+
+	lib_t libc_load = lib_t(libc_ex.path, RTLD_LAZY);
+	module_t libc_in = in::load_library(libc_load);
+	if(!libc_in.is_valid())
+		return mod;
+
+	voidptr_t dlopen_ex = (voidptr_t)(
+		(uintptr_t)libc_ex.base +
+		(uintptr_t)in::get_symbol(libc_in, "__libc_dlopen_mode") - (uintptr_t)libc_in.base
+	);
+
+	//---
+
+	byte_t inj_buf[] =
+    {
+#       if defined(MEM_86)
+        0x51,       //push ecx
+        0x53,       //push ebx
+        0xFF, 0xD0, //call eax
+        0xCC,       //int3 (SIGTRAP)
+#       elif defined(MEM_64)
+        0xFF, 0xD0, //call rax
+        0xCC,       //int3 (SIGTRAP)
+#       endif
+    };
+
+    size_t path_size = lib.path.size();
+    size_t inj_size  = sizeof(inj_buf) + path_size;
+    voidptr_t inj_addr = ex::allocate(process, inj_size, PROT_EXEC | PROT_READ | PROT_WRITE);
+    if(inj_addr == (voidptr_t)MEM_BAD) return mod;
+    voidptr_t path_addr = (voidptr_t)((uintptr_t)inj_addr + sizeof(inj_buf));
+    ex::write(process, inj_addr, (voidptr_t)inj_buf, sizeof(inj_buf));
+    ex::write(process, path_addr, (voidptr_t)lib.path.c_str(), path_size);
+
+    int status;
+    struct user_regs_struct old_regs, regs;
+    module_handle_t handle = (voidptr_t)-1;
+
+    ptrace(PTRACE_ATTACH, process.pid, MEM_NULL, MEM_NULL);
+    wait(&status);
+    ptrace(PTRACE_GETREGS, process.pid, MEM_NULL, &old_regs);
+
+    regs = old_regs;
+
+#   if defined(MEM_86)
+    regs.eax = (intptr_t)dlopen_ex;
+    regs.ebx = (intptr_t)path_addr;
+    regs.ecx = (intptr_t)lib.mode;
+    regs.eip = (intptr_t)inj_addr;
+#   elif defined(MEM_64)
+    regs.rax = (uintptr_t)dlopen_ex;
+    regs.rdi = (uintptr_t)path_addr;
+    regs.rsi = (uintptr_t)lib.mode;
+    regs.rip = (uintptr_t)inj_addr;
+#   endif
+
+    ptrace(PTRACE_SETREGS, process.pid, MEM_NULL, &regs);
+    ptrace(PTRACE_CONT, process.pid, MEM_NULL, MEM_NULL);
+    waitpid(process.pid, &status, WSTOPPED);
+    ptrace(PTRACE_GETREGS, process.pid, MEM_NULL, &regs);
+
+#   if defined(MEM_86)
+    handle = (module_handle_t)regs.eax;
+#   elif defined(MEM_64)
+    handle = (module_handle_t)regs.rax;
+#   endif
+
+    if(handle == (module_handle_t)dlopen_ex || (uintptr_t)handle > (uintptr_t)-256)
+        handle = (module_handle_t)MEM_BAD;
+
+    ptrace(PTRACE_SETREGS, process.pid, MEM_NULL, &old_regs);
+    ptrace(PTRACE_DETACH, process.pid, MEM_NULL, MEM_NULL);
+
+    //---
+
+    ex::deallocate(process, inj_addr, inj_size);
+    mod = ex::get_module(process, lib.path);
+    mod.handle = handle;
+
 #	endif
 
 	return mod;
@@ -751,21 +1103,18 @@ mem::module_t mem::ex::load_library(process_t process, lib_t lib)
 
 mem::voidptr_t mem::ex::get_symbol(module_t mod, const char* symbol)
 {
-	voidptr_t addr = (voidptr_t)MEM_BAD_RETURN;
+	voidptr_t addr = (voidptr_t)MEM_BAD;
 	if (!mod.is_valid()) return addr;
-	//WIP
-	/*
-	lib_t lib = lib_t(mod.path);
 
+	lib_t lib = lib_t(mod.path);
 	module_t mod_in = in::load_library(lib);
 	if (!mod_in.is_valid()) return addr;
 	voidptr_t addr_in = in::get_symbol(mod_in, symbol);
-	if (!addr_in || addr_in == (voidptr_t)MEM_BAD_RETURN) return addr;
+	if (!addr_in || addr_in == (voidptr_t)MEM_BAD) return addr;
 	addr = (voidptr_t)(
 		(uintptr_t)mod.base +
 		((uintptr_t)addr_in - (uintptr_t)mod_in.base)
 	);
-	*/
 
 	return addr;
 }
@@ -774,7 +1123,7 @@ mem::voidptr_t mem::ex::get_symbol(module_t mod, const char* symbol)
 
 mem::pid_t mem::in::get_pid()
 {
-	pid_t pid = (pid_t)MEM_BAD_RETURN;
+	pid_t pid = (pid_t)MEM_BAD;
 #   if defined(MEM_WIN)
 	pid = (pid_t)GetCurrentProcessId();
 #   elif defined(MEM_LINUX)
@@ -829,6 +1178,7 @@ mem::module_t mem::in::get_module(string_t module_name)
 #   elif defined(MEM_LINUX)
 	process_t process = in::get_process();
 	mod = ex::get_module(process, module_name);
+    mod.handle = dlopen(mod.path.c_str(), RTLD_LAZY);
 #   endif
 	return mod;
 }
@@ -920,7 +1270,7 @@ mem::voidptr_t mem::in::pattern_scan(data_t pattern, string_t mask, voidptr_t st
 
 mem::voidptr_t mem::in::syscall(int_t syscall_n, voidptr_t arg0, voidptr_t arg1, voidptr_t arg2, voidptr_t arg3, voidptr_t arg4, voidptr_t arg5)
 {
-	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
+	voidptr_t ret = (voidptr_t)MEM_BAD;
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
 	ret = (voidptr_t)syscall(syscall_n, arg0, arg1, arg2, arg3, arg4, arg5);
@@ -930,8 +1280,8 @@ mem::voidptr_t mem::in::syscall(int_t syscall_n, voidptr_t arg0, voidptr_t arg1,
 
 mem::int_t mem::in::protect(voidptr_t src, size_t size, prot_t protection)
 {
-	int_t ret = (int_t)MEM_BAD_RETURN;
-	if (src == (voidptr_t)MEM_BAD_RETURN || size == (size_t)MEM_BAD_RETURN || size == 0 || protection == (prot_t)MEM_BAD_RETURN) return ret;
+	int_t ret = (int_t)MEM_BAD;
+	if (src == (voidptr_t)MEM_BAD || size == (size_t)MEM_BAD || size == 0 || protection == (prot_t)MEM_BAD) return ret;
 #   if defined(MEM_WIN)
 	prot_t old_protection = 0;
 	ret = (int_t)VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protection);
@@ -946,7 +1296,7 @@ mem::int_t mem::in::protect(voidptr_t src, size_t size, prot_t protection)
 
 mem::voidptr_t mem::in::allocate(size_t size, prot_t protection)
 {
-	voidptr_t addr = (voidptr_t)MEM_BAD_RETURN;
+	voidptr_t addr = (voidptr_t)MEM_BAD;
 #   if defined(MEM_WIN)
 	addr = (voidptr_t)VirtualAlloc(MEM_NULL, (SIZE_T)size, MEM_COMMIT | MEM_RESERVE, protection);
 #   elif defined(MEM_LINUX)
@@ -1042,7 +1392,7 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, size_t size, detour_t m
 #	elif defined(MEM_LINUX)
 	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #	endif
-	if (detour_size == (size_t)MEM_BAD_RETURN || size < detour_size || in::protect(src, size, protection) == MEM_BAD) return ret;
+	if (detour_size == (size_t)MEM_BAD || size < detour_size || in::protect(src, size, protection) == MEM_BAD) return ret;
 
 	if (stolen_bytes != (byte_t**)NULL)
 	{
@@ -1135,10 +1485,10 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, size_t s
 	protection = PROT_EXEC | PROT_READ | PROT_WRITE;;
 #   endif
 
-	if (detour_size == (size_t)MEM_BAD_RETURN || size < detour_size || in::protect(src, size, protection) == MEM_BAD) return gateway;
+	if (detour_size == (size_t)MEM_BAD || size < detour_size || in::protect(src, size, protection) == MEM_BAD) return gateway;
 	size_t gateway_size = size + detour_size;
 	gateway = in::allocate(gateway_size, protection);
-	if (!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+	if (!gateway || gateway == (voidptr_t)MEM_BAD) return (voidptr_t)MEM_BAD;
 	in::set(gateway, 0x0, gateway_size);
 	in::write(gateway, src, size);
 	in::detour((voidptr_t)((uintptr_t)gateway + size), (voidptr_t)((uintptr_t)src + size), detour_size, method);

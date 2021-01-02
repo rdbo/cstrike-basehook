@@ -1,0 +1,1 @@
+typedef int FileFindHandle_t;

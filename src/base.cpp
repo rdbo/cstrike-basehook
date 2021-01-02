@@ -17,11 +17,16 @@ bool              Base::Data::Detached   = false;
 bool              Base::Data::ShowMenu   = true;
 bool              Base::Data::InitImGui  = false;
 
+cstrike::hw*      Base::Data::m_hw     = nullptr;
+cstrike::client*  Base::Data::m_client = nullptr;
+
 
 //Functions
 
 bool Base::Init()
 {
+	Data::m_client = new cstrike::client();
+	Data::m_hw     = new cstrike::hw();
 	Hooks::Init();
 	return true;
 }
@@ -29,6 +34,8 @@ bool Base::Init()
 bool Base::Shutdown()
 {
 	Hooks::Shutdown();
+	delete Data::m_hw;
+	delete Data::m_client;
 	return true;
 }
 

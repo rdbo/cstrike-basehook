@@ -1,0 +1,1 @@
+typedef enum {USE_OFF, USE_ON, USE_SET, USE_TOGGLE} USE_TYPE;

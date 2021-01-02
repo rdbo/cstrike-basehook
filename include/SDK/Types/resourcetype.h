@@ -1,0 +1,1 @@
+enum resourcetype_t {t_sound, t_skin, t_model, t_decal, t_generic, t_eventscript, t_world};

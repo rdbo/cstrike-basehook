@@ -14,6 +14,10 @@ bool Base::Hooks::Init()
 #	elif defined(MEM_64)
 	Data::oSwapBuffers = (SwapBuffers_t)mem::in::detour_trampoline(Data::pSwapBuffers, Hooks::SwapBuffers, Data::szSwapBuffers);
 #	endif
+
+	Data::m_hw->v_cl_funcs->hook(INDEX_CL_CREATEMOVE,    (mem::voidptr_t)Hooks::CL_CreateMove);
+	Data::m_hw->v_cl_funcs->hook(INDEX_CL_ISTHIRDPERSON, (mem::voidptr_t)Hooks::CL_IsThirdPerson);
+
 	return true;
 }
 
@@ -28,6 +32,8 @@ bool Base::Hooks::Shutdown()
 
 	mem::in::detour_restore(Data::pSwapBuffers, (mem::byte_t*)Data::oSwapBuffers, Data::szSwapBuffers);
 	SetWindowLongPtr(Data::hWindow, WNDPROC_INDEX, (LONG_PTR)Data::oWndProc);
+
+	Data::m_hw->v_cl_funcs->restore_all();
 
 	return true;
 }

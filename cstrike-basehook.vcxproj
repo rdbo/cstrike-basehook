@@ -91,14 +91,14 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include\SDL2\include;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)\include\SDL2\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;SDL2test.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -107,14 +107,14 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include\SDL2\include;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)\include\SDL2\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;SDL2test.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -125,7 +125,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include\SDL2\include;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -133,8 +133,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)\include\SDL2\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;SDL2test.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,7 +145,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\include\SDL2\include;$(ProjectDir)\include;$(DXSDK_DIR)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -153,8 +153,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)\include\SDL2\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;SDL2test.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -207,7 +207,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\base.cpp" />
+    <ClCompile Include="src\hooks\CL_CreateMove.cpp" />
     <ClCompile Include="src\hooks\hooks.cpp" />
+    <ClCompile Include="src\hooks\CL_IsThirdPerson.cpp" />
     <ClCompile Include="src\hooks\SwapBuffers.cpp" />
     <ClCompile Include="src\hooks\WndProc.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -228,7 +230,127 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="include\libmem++\libmem.hpp" />
+    <ClInclude Include="include\SDK\BaseTypes.h" />
+    <ClInclude Include="include\SDK\Classes\CBaseAnimating.h" />
+    <ClInclude Include="include\SDK\Classes\CBaseDelay.h" />
+    <ClInclude Include="include\SDK\Classes\CBaseEntity.h" />
+    <ClInclude Include="include\SDK\Classes\CBaseMonster.h" />
+    <ClInclude Include="include\SDK\Classes\CBasePlayer.h" />
+    <ClInclude Include="include\SDK\Classes\CBasePlayerItem.h" />
+    <ClInclude Include="include\SDK\Classes\CBaseToggle.h" />
+    <ClInclude Include="include\SDK\Classes\CEngine.h" />
+    <ClInclude Include="include\SDK\Classes\CGame.h" />
+    <ClInclude Include="include\SDK\Classes\CGameConsole.h" />
+    <ClInclude Include="include\SDK\Classes\CGameConsoleDialog.h" />
+    <ClInclude Include="include\SDK\Classes\CHintMessageQueue.h" />
+    <ClInclude Include="include\SDK\Classes\CRestore.h" />
+    <ClInclude Include="include\SDK\Classes\CSave.h" />
+    <ClInclude Include="include\SDK\Classes\CSquadMonster.h" />
+    <ClInclude Include="include\SDK\Classes\CUnifiedSignals.h" />
+    <ClInclude Include="include\SDK\Classes\CWeaponBox.h" />
+    <ClInclude Include="include\SDK\Classes\ObjectList.h" />
+    <ClInclude Include="include\SDK\Interfaces\IBaseInterface.h" />
+    <ClInclude Include="include\SDK\Interfaces\IBaseSystem.h" />
+    <ClInclude Include="include\SDK\Interfaces\IBaseUI.h" />
+    <ClInclude Include="include\SDK\Interfaces\IEngine.h" />
+    <ClInclude Include="include\SDK\Interfaces\IFileSystem.h" />
+    <ClInclude Include="include\SDK\Interfaces\IGame.h" />
+    <ClInclude Include="include\SDK\Interfaces\IGameConsole.h" />
+    <ClInclude Include="include\SDK\Interfaces\IObjectContainer.h" />
+    <ClInclude Include="include\SDK\Interfaces\ISystemModule.h" />
+    <ClInclude Include="include\SDK\Interfaces\IVGuiModule.h" />
+    <ClInclude Include="include\SDK\SDK.h" />
+    <ClInclude Include="include\SDK\Types\Activity.h" />
+    <ClInclude Include="include\SDK\Types\AmmoInfo.h" />
+    <ClInclude Include="include\SDK\Types\AutoBuyClassType.h" />
+    <ClInclude Include="include\SDK\Types\AutoBuyInfoStruct.h" />
+    <ClInclude Include="include\SDK\Types\cache_user.h" />
+    <ClInclude Include="include\SDK\Types\cldll_func.h" />
+    <ClInclude Include="include\SDK\Types\clientdata.h" />
+    <ClInclude Include="include\SDK\Types\client_state.h" />
+    <ClInclude Include="include\SDK\Types\client_textmessage.h" />
+    <ClInclude Include="include\SDK\Types\cl_enginefuncs.h" />
+    <ClInclude Include="include\SDK\Types\cl_entity.h" />
+    <ClInclude Include="include\SDK\Types\cmd.h" />
+    <ClInclude Include="include\SDK\Types\cmdalias.h" />
+    <ClInclude Include="include\SDK\Types\consistency.h" />
+    <ClInclude Include="include\SDK\Types\customization.h" />
+    <ClInclude Include="include\SDK\Types\dclipnode.h" />
+    <ClInclude Include="include\SDK\Types\decal.h" />
+    <ClInclude Include="include\SDK\Types\dlight.h" />
+    <ClInclude Include="include\SDK\Types\dmodel.h" />
+    <ClInclude Include="include\SDK\Types\edict.h" />
+    <ClInclude Include="include\SDK\Types\efrag.h" />
+    <ClInclude Include="include\SDK\Types\EHandle.h" />
+    <ClInclude Include="include\SDK\Types\entity_state.h" />
+    <ClInclude Include="include\SDK\Types\entvars.h" />
+    <ClInclude Include="include\SDK\Types\event.h" />
+    <ClInclude Include="include\SDK\Types\event_args.h" />
+    <ClInclude Include="include\SDK\Types\event_info.h" />
+    <ClInclude Include="include\SDK\Types\event_state.h" />
+    <ClInclude Include="include\SDK\Types\FieldType.h" />
+    <ClInclude Include="include\SDK\Types\FileFindHandle.h" />
+    <ClInclude Include="include\SDK\Types\FileHandle.h" />
+    <ClInclude Include="include\SDK\Types\FileSystemSeek.h" />
+    <ClInclude Include="include\SDK\Types\FileWarningLevel.h" />
+    <ClInclude Include="include\SDK\Types\frame.h" />
+    <ClInclude Include="include\SDK\Types\hull.h" />
+    <ClInclude Include="include\SDK\Types\ItemInfo.h" />
+    <ClInclude Include="include\SDK\Types\JoinState.h" />
+    <ClInclude Include="include\SDK\Types\kbutton.h" />
+    <ClInclude Include="include\SDK\Types\KeyValueData.h" />
+    <ClInclude Include="include\SDK\Types\latchedvars.h" />
+    <ClInclude Include="include\SDK\Types\link.h" />
+    <ClInclude Include="include\SDK\Types\local_state.h" />
+    <ClInclude Include="include\SDK\Types\medge.h" />
+    <ClInclude Include="include\SDK\Types\Menu.h" />
+    <ClInclude Include="include\SDK\Types\mleaf.h" />
+    <ClInclude Include="include\SDK\Types\mnode.h" />
+    <ClInclude Include="include\SDK\Types\model.h" />
+    <ClInclude Include="include\SDK\Types\ModelName.h" />
+    <ClInclude Include="include\SDK\Types\modtype.h" />
+    <ClInclude Include="include\SDK\Types\MonsterEvent.h" />
+    <ClInclude Include="include\SDK\Types\MonsterState.h" />
+    <ClInclude Include="include\SDK\Types\mouth.h" />
+    <ClInclude Include="include\SDK\Types\movevars.h" />
+    <ClInclude Include="include\SDK\Types\mplane.h" />
+    <ClInclude Include="include\SDK\Types\msurface.h" />
+    <ClInclude Include="include\SDK\Types\mtexinfo.h" />
+    <ClInclude Include="include\SDK\Types\mvertex.h" />
+    <ClInclude Include="include\SDK\Types\packet_entities.h" />
+    <ClInclude Include="include\SDK\Types\physent.h" />
+    <ClInclude Include="include\SDK\Types\plane.h" />
+    <ClInclude Include="include\SDK\Types\PlayerAnim.h" />
+    <ClInclude Include="include\SDK\Types\playermove.h" />
+    <ClInclude Include="include\SDK\Types\player_info.h" />
+    <ClInclude Include="include\SDK\Types\pmplane.h" />
+    <ClInclude Include="include\SDK\Types\pmtrace.h" />
+    <ClInclude Include="include\SDK\Types\position_history.h" />
+    <ClInclude Include="include\SDK\Types\RebuyStruct.h" />
+    <ClInclude Include="include\SDK\Types\resource.h" />
+    <ClInclude Include="include\SDK\Types\resourcetype.h" />
+    <ClInclude Include="include\SDK\Types\screenfade.h" />
+    <ClInclude Include="include\SDK\Types\sentenceEntry.h" />
+    <ClInclude Include="include\SDK\Types\sequenceCommandLine.h" />
+    <ClInclude Include="include\SDK\Types\sequenceEntry.h" />
+    <ClInclude Include="include\SDK\Types\sfx.h" />
+    <ClInclude Include="include\SDK\Types\surfcache.h" />
+    <ClInclude Include="include\SDK\Types\synctype.h" />
+    <ClInclude Include="include\SDK\Types\TeamName.h" />
+    <ClInclude Include="include\SDK\Types\texture.h" />
+    <ClInclude Include="include\SDK\Types\ToggleState.h" />
+    <ClInclude Include="include\SDK\Types\trace.h" />
+    <ClInclude Include="include\SDK\Types\TraceResult.h" />
+    <ClInclude Include="include\SDK\Types\TypeDescription.h" />
+    <ClInclude Include="include\SDK\Types\usercmd.h" />
+    <ClInclude Include="include\SDK\Types\UseType.h" />
+    <ClInclude Include="include\SDK\Types\Vector.h" />
+    <ClInclude Include="include\SDK\Types\Vector2D.h" />
+    <ClInclude Include="include\SDK\Types\WairForResourcesHandle.h" />
+    <ClInclude Include="include\SDK\Types\weapon_data.h" />
+    <ClInclude Include="include\SDK\Types\_generic.h" />
     <ClInclude Include="src\base.h" />
+    <ClInclude Include="src\game.h" />
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>

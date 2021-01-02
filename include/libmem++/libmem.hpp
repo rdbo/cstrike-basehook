@@ -98,13 +98,15 @@
 #define MEM_STR_CMP(str1, str2) wcscmp(str1, str2)
 #define MEM_STR_N_CMP(str1, str2, n) wcsncmp(str1, str2, n)
 #define MEM_STR_LEN(str) wcslen(str)
-#define MEM_STR_STR(str1, str2) wcsstrstr(str1, str2);
+#define MEM_STR_STR(str1, str2) wcsstrstr(str1, str2)
+#define MEM_STR_TO_PTR(str) (void*)wcstoul(str, NULL, 16)
 #elif defined(MEM_MBCS)
 #define MEM_STR(str) str
 #define MEM_STR_CMP(str1, str2) strcmp(str1, str2)
 #define MEM_STR_N_CMP(str1, str2, n) strncmp(str1, str2, n)
 #define MEM_STR_LEN(str) strlen(str)
-#define MEM_STR_STR(str1, str2) strstr(str1, str2);
+#define MEM_STR_STR(str1, str2) strstr(str1, str2)
+#define MEM_STR_TO_PTR(str) (void*)strtoul(str, NULL, 16)
 #endif
 
 #define VA_ARGS(...) , ##__VA_ARGS__
@@ -374,7 +376,7 @@ namespace mem
 	class vtable_t
 	{
 		public:
-		std::shared_ptr<voidptr_t> table = std::make_shared<voidptr_t>((voidptr_t)-1);
+		voidptr_t* table = (voidptr_t*)-1;
 		std::unordered_map<size_t, voidptr_t> orig_table = {};
 
 		public:
@@ -383,6 +385,8 @@ namespace mem
 
 		public:
 		bool_t is_valid();
+        voidptr_t get_function(size_t index);
+        voidptr_t get_original(size_t index);
 		bool_t hook(size_t index, voidptr_t dst);
 		bool_t restore(size_t index);
 		bool_t restore_all();

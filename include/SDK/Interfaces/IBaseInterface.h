@@ -1,0 +1,4 @@
+class IBaseInterface {
+  public:
+    ~IBaseInterface();
+};

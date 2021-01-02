@@ -1,0 +1,53 @@
+class CBasePlayer;
+
+class CBasePlayerItem : public CBaseAnimating {
+  public:
+    static TYPEDESCRIPTION m_SaveData[];
+    static ItemInfo ItemInfoArray[32];
+    static AmmoInfo AmmoInfoArray[32];
+    CBasePlayer *m_pPlayer;
+    CBasePlayerItem *m_pNext;
+    int m_iId;
+
+    virtual void SetObjectCollisionBox(void);
+    virtual int Save(CSave &);
+    virtual int Restore(CRestore &);
+    virtual int AddToPlayer(CBasePlayer *);
+    virtual int AddDuplicate(CBasePlayerItem *);
+    void DestroyItem(void);
+    void DefaultTouch(CBaseEntity *);
+    void FallThink(void);
+    void Materialize(void);
+    void AttemptToMaterialize(void);
+    virtual CBaseEntity * Respawn(void);
+    void FallInit(void);
+    void CheckRespawn(void);
+    virtual int GetItemInfo(ItemInfo *);
+    virtual BOOL CanDeploy(void);
+    virtual BOOL CanDrop(void);
+    virtual BOOL Deploy(void);
+    virtual BOOL IsWeapon(void);
+    virtual BOOL CanHolster(void);
+    virtual void Holster(int);
+    virtual void UpdateItemInfo(void);
+    virtual void ItemPreFrame(void);
+    virtual void ItemPostFrame(void);
+    virtual void Drop(void);
+    virtual void Kill(void);
+    virtual void AttachToPlayer(CBasePlayer *);
+    virtual int PrimaryAmmoIndex(void);
+    virtual int SecondaryAmmoIndex(void);
+    virtual int UpdateClientData(CBasePlayer *);
+    virtual CBasePlayerItem * GetWeaponPtr(void);
+    virtual float GetMaxSpeed(void);
+    virtual int iItemSlot(void);
+    int iItemPosition(void);
+    const char * pszAmmo1(void);
+    int iMaxAmmo1(void);
+    const char * pszAmmo2(void);
+    int iMaxAmmo2(void);
+    const char * pszName(void);
+    int iMaxClip(void);
+    int iWeight(void);
+    int iFlags(void);
+};

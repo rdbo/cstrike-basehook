@@ -6,9 +6,6 @@
 #define BASE_OFFSET(base, offset) (&((char*)base)[offset])
 #define MODULE_OFFSET(offset) BASE_OFFSET(this->Module.base, offset)
 
-#define INDEX_CL_CREATEMOVE    14
-#define INDEX_CL_ISTHIRDPERSON 15
-
 namespace cstrike
 {
 	namespace Offsets
@@ -43,6 +40,39 @@ namespace cstrike
 		}
 	};
 
+	class hw : GameModule
+	{
+	public:
+		cldll_func_t* cl_funcs = nullptr;
+		cldll_func_t      o_cl_funcs = {};
+		CGame* Game = nullptr;
+		cl_enginefuncs_s* Engfuncs = nullptr;
+	public:
+		hw()
+		{
+			if (!this->Setup("hw.dll"))
+				return;
+
+			this->Update();
+			this->IsValid = true;
+		}
+
+		~hw()
+		{
+
+		}
+
+
+		void Update()
+		{
+			this->cl_funcs = (cldll_func_t*)MODULE_OFFSET(Offsets::pClFuncs);
+			memcpy((void*)& this->o_cl_funcs, (void*)this->cl_funcs, sizeof(this->o_cl_funcs));
+
+			this->Engfuncs = (cl_enginefuncs_s*)MODULE_OFFSET(Offsets::pEngFuncs);
+			this->Game = (CGame*)MODULE_OFFSET(Offsets::pGame);
+		}
+	};
+
 	class client : public GameModule
 	{
 	public:
@@ -60,41 +90,6 @@ namespace cstrike
 		void Update()
 		{
 
-		}
-	};
-
-	class hw : GameModule
-	{
-	public:
-		cldll_func_t*     cl_funcs   = nullptr;
-		mem::vtable_t*    v_cl_funcs = nullptr;
-		CGame*            Game       = nullptr;
-		cl_enginefuncs_s* Engfuncs   = nullptr;
-	public:
-		hw()
-		{
-			if (!this->Setup("hw.dll"))
-				return;
-
-			this->Update();
-			this->IsValid = true;
-		}
-
-		~hw()
-		{
-			if (v_cl_funcs)
-				delete this->v_cl_funcs;
-		}
-
-
-		void Update()
-		{
-			this->cl_funcs = (cldll_func_t*)MODULE_OFFSET(Offsets::pClFuncs);
-			this->v_cl_funcs = new mem::vtable_t((mem::voidptr_t*)this->cl_funcs);
-
-			this->Engfuncs = (cl_enginefuncs_s*)MODULE_OFFSET(Offsets::pEngFuncs);
-
-			this->Game = (CGame*)MODULE_OFFSET(Offsets::pGame);
 		}
 	};
 }

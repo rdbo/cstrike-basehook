@@ -55,6 +55,7 @@ namespace Base
 		LRESULT CALLBACK  WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		void CL_CreateMove(float frametime, struct usercmd_s* cmd, int active);
 		int  CL_IsThirdPerson(void);
+		void HUD_ClientMove(struct playermove_s* ppmove, qboolean server);
 	}
 }
 

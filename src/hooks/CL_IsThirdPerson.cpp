@@ -3,5 +3,5 @@
 
 int Base::Hooks::CL_IsThirdPerson(void)
 {
-	return ((HUD_CL_ISTHIRDPERSON_FUNC)Data::m_hw->v_cl_funcs->get_original(INDEX_CL_ISTHIRDPERSON))();
+	return Data::m_hw->o_cl_funcs.pCL_IsThirdPerson();
 }

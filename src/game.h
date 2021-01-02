@@ -13,8 +13,9 @@ namespace cstrike
 {
 	namespace Offsets
 	{
-		const uintptr_t pClFuncs = 0x122ED60;
-		const uintptr_t pGame    = 0x6C3A90;
+		const uintptr_t pClFuncs  = 0x122ED60;
+		const uintptr_t pEngFuncs = 0x136260;
+		const uintptr_t pGame     = 0x6C3A90;
 	}
 
 	class GameModule
@@ -65,9 +66,10 @@ namespace cstrike
 	class hw : GameModule
 	{
 	public:
-		cldll_func_t*  cl_funcs = nullptr;
-		mem::vtable_t* v_cl_funcs = nullptr;
-		CGame*         Game;
+		cldll_func_t*     cl_funcs   = nullptr;
+		mem::vtable_t*    v_cl_funcs = nullptr;
+		CGame*            Game       = nullptr;
+		cl_enginefuncs_s* Engfuncs   = nullptr;
 	public:
 		hw()
 		{
@@ -89,6 +91,8 @@ namespace cstrike
 		{
 			this->cl_funcs = (cldll_func_t*)MODULE_OFFSET(Offsets::pClFuncs);
 			this->v_cl_funcs = new mem::vtable_t((mem::voidptr_t*)this->cl_funcs);
+
+			this->Engfuncs = (cl_enginefuncs_s*)MODULE_OFFSET(Offsets::pEngFuncs);
 
 			this->Game = (CGame*)MODULE_OFFSET(Offsets::pGame);
 		}

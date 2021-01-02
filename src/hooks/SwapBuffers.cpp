@@ -25,7 +25,7 @@ BOOL __stdcall Base::Hooks::SwapBuffers(_In_ HDC hdc)
 		glOrtho(0, m_viewport[2], m_viewport[3], 0, 1, -1);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		glClearColor(0, 0, 0, 1);
+		glClearColor(0, 0, 0, 0);
 		ContextCreated = true;
 	}
 

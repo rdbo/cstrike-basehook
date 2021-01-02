@@ -1,4 +1,4 @@
-class CBaseEntity;
+struct CBaseEntity;
 
 class CHintMessageQueue {
     private:
